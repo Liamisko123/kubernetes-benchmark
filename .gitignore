@@ -1,0 +1,7 @@
+*.log
+collected_metrics/
+perf-tests/
+prometheus-3.10.0.linux-amd64/
+.kube/
+.helm/
+*.crt

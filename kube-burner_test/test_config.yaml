@@ -1,0 +1,36 @@
+metricsEndpoints:
+  - endpoint: http://localhost:9090
+    step: 5s
+    indexer:
+      type: elasticsearch
+      esServers: ["http://localhost:9200"]
+      defaultIndex: bench_metrics
+      insecureSkipVerify: true
+
+global:
+  measurements:
+    - name: podLatency
+    - name: serviceLatency
+      svcTimeout: 5s
+    - name: jobLatency
+    - name: nodeLatency
+    - name: pvcLatency
+    # Note: The following require KubeVirt and CDI to be present
+    # - name: vmiLatency
+    # - name: dataVolumeLatency
+    # - name: volumeSnapshotLatencyc
+    # - name: vmimLatency
+
+jobs:
+  - name: k3s-stress-test
+    jobIterations: 2
+    namespace: burner-test
+    namespacedIterations: true
+    cleanup: true
+    podWait: true
+    waitWhenFinished: true
+    qps: 10
+    burst: 20
+    objects:
+      - objectTemplate: pod.yaml
+        replicas: 30

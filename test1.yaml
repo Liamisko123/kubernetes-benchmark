@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: test1
+  name: test1
+spec:
+  replicas: 10
+  selector:
+    matchLabels:
+      app: test1
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: test1 
+    spec:
+      nodeSelector:
+        device: edge
+      containers:
+      - name: test1
+        image: liamisko123/test:v1
+        resources: {}
+status: {}
