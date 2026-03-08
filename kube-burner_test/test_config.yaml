@@ -1,15 +1,21 @@
 metricsEndpoints:
   - endpoint: http://localhost:9090
-    step: 5s
+    step: 1s
+    metrics: [metrics.yaml]
     indexer:
-      type: elasticsearch
-      esServers: ["http://localhost:9200"]
+      type: elastic
+      esServers: ["https://elastic:{{.ELASTIC_PASSWORD}}@192.168.137.1:9200"]
       defaultIndex: bench_metrics
       insecureSkipVerify: true
 
 global:
+  gc: true
   measurements:
     - name: podLatency
+      thresholds:
+        - conditionType: Ready
+          metric: P99
+          threshold: 20s
     - name: serviceLatency
       svcTimeout: 5s
     - name: jobLatency
@@ -22,15 +28,44 @@ global:
     # - name: vmimLatency
 
 jobs:
-  - name: k3s-stress-test
-    jobIterations: 2
+  - name: stress-0
+    jobIterations: 3
     namespace: burner-test
-    namespacedIterations: true
+    namespacedIterations: false
+    preLoadImages: true
     cleanup: true
-    podWait: true
     waitWhenFinished: true
-    qps: 10
-    burst: 20
+    qps: 5
+    burst: 5
     objects:
-      - objectTemplate: pod.yaml
-        replicas: 30
+      - objectTemplate: job.yaml
+        replicas: 10
+
+  # - name: stress-1
+  #   jobIterations: 1
+  #   namespace: burner-test
+  #   namespacedIterations: false
+  #   preLoadImages: true
+  #   cleanup: true
+  #   podWait: true
+  #   waitWhenFinished: true
+  #   jobPause: 30s
+  #   qps: 5
+  #   burst: 5
+  #   objects:
+  #     - objectTemplate: pod.yaml
+  #       replicas: 10
+
+#   - name: stress-2
+#     jobIterations: 1
+#     namespace: burner-test
+#     namespacedIterations: false
+#     preLoadImages: true
+#     cleanup: true
+#     podWait: true
+#     waitWhenFinished: true
+#     qps: 5
+#     burst: 5
+#     objects:
+#       - objectTemplate: pod.yaml
+#         replicas: 10

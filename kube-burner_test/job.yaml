@@ -1,0 +1,23 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: job-{{.JobName}}-iter-{{.Iteration}}-replica-{{.Replica}}
+  labels:
+    app: bench-job
+    kube-burner.io/job: {{.JobName}}
+    kube-burner.io/iteration: {{.Iteration}}
+spec:
+  template:
+    metadata:
+      labels:
+        app: bench-pod
+    spec:
+      nodeSelector:
+        kubernetes.io/arch: arm64
+        device: edge
+      containers:
+        - name: bench-test
+          image: liamisko123/test:v2
+          ports:
+            - containerPort: 8080
+      restartPolicy: Never
