@@ -6,3 +6,5 @@ prometheus-3.10.0.linux-amd64/
 .helm/
 *.crt
 examples/
+reports/
+kube-burner_test/

@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{.Name}}
+spec:
+  selector:
+    matchLabels:
+      app: {{.Name}}
+  template:
+    metadata:
+      labels:
+        app: {{.Name}}
+    spec:
+      containers:
+      # - name: daemon
+      #   image: {{.Image}}
+      - name: app
+        image: node:20-slim
+        command: 
+          - "node"
+          - "-e"
+          - "const {Worker}=require('worker_threads'); const cores=require('os').cpus().length; console.log('Saturating '+cores+' cores...'); for(let i=0; i<cores; i++) { new Worker('while(true){ Math.atan(Math.random())*Math.tan(Math.random()); }', {eval:true}); }"
+        resources:
+          limits:
+            cpu: "3000m" # 3.5 cores to leave a tiny sliver for OS overhead
+          requests:
+            cpu: "2000m"      

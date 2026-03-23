@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{.Name}}
+spec:
+  clusterIP: None
+  selector:
+    app: {{.Name}}
+  ports:
+  - name: web
+    port: 80
+    targetPort: 80

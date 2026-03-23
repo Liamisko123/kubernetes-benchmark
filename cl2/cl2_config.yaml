@@ -1,0 +1,246 @@
+{{$duration := "60s"}} # sleep duration
+{{$namespaces := 1}}
+{{$replicaspp := 2}}
+
+tuningSets:
+- name: Sequence
+  parallelismLimitedLoad:
+    parallelismLimit: 1
+
+- name: RandomizedSaturationTimeLimited
+  randomizedTimeLimitedLoad:
+    timeLimit: 1m
+
+name: Hyper-Benchmark
+namespace:
+  number: {{$namespaces}}
+steps:
+- name: Start measurements global
+  measurements:
+  - Identifier: gq_api_latency
+    Method: GenericPrometheusQuery
+    Params:
+      action: start
+      metricName: API request latency
+      metricVersion: v1
+      unit: ms
+      queries:
+        - name: Perc99
+          query: histogram_quantile(0.99, sum(rate(apiserver_request_sli_duration_seconds_bucket[%v])) by (le))
+        - name: Perc90
+          query: histogram_quantile(0.9, sum(rate(apiserver_request_sli_duration_seconds_bucket[%v])) by (le))
+        - name: Perc50
+          query: histogram_quantile(0.5, sum(rate(apiserver_request_sli_duration_seconds_bucket[%v])) by (le))
+
+  - Identifier: gq_node_cpu_usage
+    Method: GenericPrometheusQuery
+    Params:
+      action: start
+      metricName: Node CPU Usage
+      metricVersion: v1
+      unit: cores
+      queries:
+        - name: Average
+          query: avg(sum by (instance) (rate(node_cpu_seconds_total{mode!="idle", instance!="192.168.137.1:9100"}[1m])))
+
+  - Identifier: gq_node_memory_usage
+    Method: GenericPrometheusQuery
+    Params:
+      action: start
+      metricName: Node Memory Usage
+      metricVersion: v1
+      unit: MB
+      queries:
+        - name: Average
+          query: avg(node_memory_MemTotal_bytes{instance!="192.168.137.1:9100"} - node_memory_MemAvailable_bytes{instance!="192.168.137.1:9100"}) / 1024 / 1024
+
+  - Identifier: gq_node_disk_writes
+    Method: GenericPrometheusQuery
+    Params:
+      action: start
+      metricName: Node Disk Write Throughput
+      metricVersion: v1
+      unit: KB/s
+      queries:
+        - name: Average disk space
+          query: avg(node_disk_written_bytes_total{instance!="192.168.137.1:9100"})
+        - name: Average disk latency
+          query: avg(rate(node_disk_write_time_seconds_total{instance!="192.168.137.1:9100"}[1m]))
+
+  - Identifier: gq_node_network_rx
+    Method: GenericPrometheusQuery
+    Params:
+      action: start
+      metricName: Node Network RX Throughput
+      metricVersion: v1
+      unit: KB/s
+      queries:
+        - name: Average
+          query: avg(rate(node_network_receive_bytes_total{instance!="192.168.137.1:9100"}[1m])) / 1024
+
+  - Identifier: APIResponsivenessPrometheus
+    Method: APIResponsivenessPrometheus
+    Params:
+      action: start
+
+  - Identifier: PodStartupLatency
+    Method: PodStartupLatency
+    Params:
+      action: start
+      labelSelector: group = load
+      threshold: 1h
+
+- name: Creating services
+  phases:
+  - namespaceRange:
+      min: 1
+      max: {{$namespaces}}
+    replicasPerNamespace: 1
+    tuningSet: Sequence
+    objectBundle:
+    - basename: service
+      objectTemplatePath: service.yaml
+
+- name: Start measurement for waiting for pods
+  measurements:
+  - Method: WaitForControlledPodsRunning
+    Instances:
+    - Identifier: WaitForRunningDeployments
+      Params:
+        apiVersion: apps/v1
+        kind: Deployment
+
+    - Identifier: WaitForRunningStatefulSets
+      Params:
+        apiVersion: apps/v1
+        kind: StatefulSet
+
+    - Identifier: WaitForRunningDaemonSets
+      Params:
+        apiVersion: apps/v1
+        kind: DaemonSet
+
+    - Identifier: WaitForRunningJobs
+      Params:
+        apiVersion: batch/v1
+        kind: Job
+
+    Params:
+      action: start
+      labelSelector: group = load
+      operationTimeout: 15m
+  
+- name: Creating objects
+  phases:
+  - namespaceRange:
+      min: 1
+      max: 1
+    replicasPerNamespace: 1
+    tuningSet: RandomizedSaturationTimeLimited
+    objectBundle:
+    - basename: daemonset
+      objectTemplatePath: daemonset.yaml
+      templateFillMap:
+        Image: registry.k8s.io/pause:3.9
+
+  - namespaceRange:
+      min: 1
+      max: {{$namespaces}}
+    replicasPerNamespace: 1
+    tuningSet: RandomizedSaturationTimeLimited
+    objectBundle:
+    - basename: my-configmap
+      objectTemplatePath: configmap.yaml
+
+    - basename: my-secret
+      objectTemplatePath: secret.yaml
+
+    - basename: my-deployment
+      objectTemplatePath: deployment.yaml
+      templateFillMap:
+        EnableDNSTests: false
+        ReplicasMin: 15
+        ReplicasMax: 15
+        SvcName: my-service
+        Image: liamisko123/test:v1
+
+    - basename: my-job
+      objectTemplatePath: job.yaml
+      templateFillMap:
+        ReplicasMin: 5
+        ReplicasMax: 5
+        Image: liamisko123/test:v2
+
+    - basename: my-statefulset
+      objectTemplatePath: statefulset_service.yaml
+
+    - basename: my-statefulset
+      objectTemplatePath: statefulset.yaml
+      templateFillMap:
+        ReplicasMin: 1
+        ReplicasMax: 1
+        Image: registry.k8s.io/pause:3.9
+
+- name: Waiting for pods to be running
+  measurements:
+  - Method: WaitForControlledPodsRunning
+    Instances:
+     - Identifier: WaitForRunningDeployments
+     - Identifier: WaitForRunningStatefulSets
+     - Identifier: WaitForRunningDaemonSets
+     - Identifier: WaitForRunningJobs
+    Params:
+      action: gather
+
+- name: Sleep
+  measurements:
+  - Identifier: sleep
+    Method: Sleep
+    Params:
+      duration: {{$duration}}
+
+# BEGIN scheduler throughput
+# BEGIN pod-startup-latency
+
+- name: Gather measurements global
+  measurements:
+  - Identifier: APIResponsivenessPrometheus
+    Method: APIResponsivenessPrometheus
+    Params:
+      action: gather
+
+  - Identifier: PodStartupLatency
+    Method: PodStartupLatency
+    Params:
+      action: gather
+  
+  - Identifier: gq_api_latency
+    Method: GenericPrometheusQuery
+    Params:
+      action: gather
+      enableViolations: true
+
+  - Identifier: gq_node_cpu_usage
+    Method: GenericPrometheusQuery
+    Params:
+      action: gather
+      enableViolations: true
+
+  - Identifier: gq_node_memory_usage
+    Method: GenericPrometheusQuery
+    Params:
+      action: gather
+      enableViolations: true
+
+  - Identifier: gq_node_disk_writes
+    Method: GenericPrometheusQuery
+    Params:
+      action: gather
+      enableViolations: true
+
+  - Identifier: gq_node_network_rx
+    Method: GenericPrometheusQuery
+    Params:
+      action: gather
+      enableViolations: true
+  
