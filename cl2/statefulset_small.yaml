@@ -3,7 +3,7 @@ kind: StatefulSet
 metadata:
   name: {{.Name}}
   labels:
-    group: load
+    group: load_small
 spec:
   podManagementPolicy: Parallel
   # serviceName: {{.Name}}
@@ -11,12 +11,12 @@ spec:
   selector:
     matchLabels:
       app: {{.Name}}
-      group: load
+      group: load_small
   template:
     metadata:
       labels:
         app: {{.Name}}
-        group: load
+        group: load_small
     spec:
       affinity:
         nodeAffinity:
@@ -30,7 +30,7 @@ spec:
                 - arm64
               # Requirement 2: Must NOT be pi5
               - key: kubernetes.io/hostname
-                operator: NotIn
+                operator: In
                 values:
                 - pi5
       containers:

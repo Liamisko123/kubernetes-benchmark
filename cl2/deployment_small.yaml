@@ -1,28 +1,36 @@
-apiVersion: batch/v1
-kind: Job
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   name: {{.Name}}
 spec:
-  completions: {{.ReplicasMin}}
-  parallelism: {{.ReplicasMin}}
+  replicas: {{.ReplicasMin}}
+  selector:
+    matchLabels:
+      app: {{.Name}}
+      group: load_small
   template:
+    metadata:
+      labels:
+        app: {{.Name}}
+        group: load_small
     spec:
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
             - matchExpressions:
-              # Requirement 1: Must still be arm64
               - key: kubernetes.io/arch
                 operator: In
                 values:
-                - arm64
-              # Requirement 2: Must NOT be pi5
+                - arm64        
               - key: kubernetes.io/hostname
-                operator: NotIn
+                operator: In
                 values:
                 - pi5
-      restartPolicy: Never
       containers:
-      - name: job
+      - name: app
         image: {{.Image}}
+        resources:
+          requests:
+            cpu: "5m"
+            memory: "4Mi"
