@@ -12,8 +12,6 @@ spec:
         app: {{.Name}}
     spec:
       containers:
-      # - name: daemon
-      #   image: {{.Image}}
       - name: app
         image: node:20-slim
         command: 
@@ -22,6 +20,19 @@ spec:
           - "const {Worker}=require('worker_threads'); const cores=require('os').cpus().length; console.log('Saturating '+cores+' cores...'); for(let i=0; i<cores; i++) { new Worker('while(true){ Math.atan(Math.random())*Math.tan(Math.random()); }', {eval:true}); }"
         resources:
           limits:
-            cpu: "3000m" # 3.5 cores to leave a tiny sliver for OS overhead
+            cpu: "3000m"
           requests:
-            cpu: "2000m"      
+            cpu: "2500m"
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/arch
+                operator: In
+                values:
+                - arm64
+              - key: kubernetes.io/hostname
+                operator: NotIn
+                values:
+                - pi5  

@@ -2,4 +2,5 @@
 
 kubectl apply -f nodeexporter_config.yaml
 
-kubectl patch endpoints master -n monitoring --type='json' -p='[{"op": "replace", "path": "/subsets/0/ports/0/port", "value": 6443}]'
+kubectl apply -f nodeexporter_config.yaml
+kubectl patch endpoints master -n monitoring --type='json' -p='[{"op": "replace", "path": "/subsets/0/ports/0/port", "value": 16443}]'

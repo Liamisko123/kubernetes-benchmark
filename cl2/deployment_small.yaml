@@ -1,50 +1,36 @@
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
   name: {{.Name}}
-  labels:
-    group: load
 spec:
-  podManagementPolicy: Parallel
-  # serviceName: {{.Name}}
   replicas: {{.ReplicasMin}}
   selector:
     matchLabels:
       app: {{.Name}}
-      group: load
+      group: load_small
   template:
     metadata:
       labels:
         app: {{.Name}}
-        group: load
+        group: load_small
     spec:
       affinity:
         nodeAffinity:
           requiredDuringSchedulingIgnoredDuringExecution:
             nodeSelectorTerms:
             - matchExpressions:
-              # Requirement 1: Must still be arm64
               - key: kubernetes.io/arch
                 operator: In
                 values:
-                - arm64
-              # Requirement 2: Must NOT be pi5
+                - arm64        
               - key: kubernetes.io/hostname
-                operator: NotIn
+                operator: In
                 values:
                 - pi5
       containers:
       - name: app
         image: {{.Image}}
-        volumeMounts:
-        - name: storage
-          mountPath: /data
-  volumeClaimTemplates:
-  - metadata:
-      name: storage
-    spec:
-      accessModes: [ "ReadWriteOnce" ]
-      storageClassName: "local-path"
-      resources:
-        requests:
-          storage: 10Mi
+        resources:
+          requests:
+            cpu: "5m"
+            memory: "4Mi"

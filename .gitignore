@@ -1,4 +1,5 @@
 *.log
+*.txt
 collected_metrics/
 perf-tests/
 prometheus-3.10.0.linux-amd64/
@@ -6,5 +7,5 @@ prometheus-3.10.0.linux-amd64/
 .helm/
 *.crt
 examples/
-reports/
+*reports/
 kube-burner_test/

@@ -7,8 +7,21 @@ spec:
   parallelism: {{.ReplicasMin}}
   template:
     spec:
-      nodeSelector:
-        kubernetes.io/arch: arm64
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              # Requirement 1: Must still be arm64
+              - key: kubernetes.io/arch
+                operator: In
+                values:
+                - arm64
+              # Requirement 2: Must NOT be pi5
+              - key: kubernetes.io/hostname
+                operator: NotIn
+                values:
+                - pi5
       restartPolicy: Never
       containers:
       - name: job

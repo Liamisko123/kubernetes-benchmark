@@ -7,14 +7,26 @@ spec:
   selector:
     matchLabels:
       app: {{.Name}}
+      group: load
   template:
     metadata:
       labels:
         app: {{.Name}}
         group: load
     spec:
-      nodeSelector:
-        kubernetes.io/arch: arm64
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/arch
+                operator: In
+                values:
+                - arm64
+              - key: kubernetes.io/hostname
+                operator: NotIn
+                values:
+                - pi5
       containers:
       - name: app
         image: {{.Image}}

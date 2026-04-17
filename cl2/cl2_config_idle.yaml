@@ -1,12 +1,5 @@
-{{$duration := "60s"}} # sleep duration
+{{$duration := "1h"}} # sleep duration
 {{$namespaces := 1}}
-
-{{$countPod := 96}}
-{{$countStateful := 32}}
-{{$countJob := 16}}
-
-{{$countPodSmall := 10}}
-{{$countStatefulSmall := 2}}
 
 tuningSets:
 - name: Sequence
@@ -29,7 +22,7 @@ steps:
       action: start
       metricName: API request latency
       metricVersion: v1
-      threshold: 15m
+      threshold: 2h
       unit: customUnitsMustBeSpecifiedInConfig
       queries:
       - name: P99_api
@@ -224,150 +217,6 @@ steps:
         query: avg(avg_over_time(node_hwmon_temp_celsius{instance="192.168.137.14:9100", sensor="temp1", chip="thermal_thermal_zone0"}[%v]))
       - name: avg_cpu_clock_pi5
         query: avg(avg_over_time(node_cpu_scaling_frequency_hertz{instance="192.168.137.14:9100"}[%v]))
-  
-  - Identifier: PodStartupLatencyBig
-    Method: PodStartupLatency
-    Params:
-      action: start
-      labelSelector: group=load
-      threshold: 15m
-
-  - Identifier: PodStartupLatencySmall
-    Method: PodStartupLatency
-    Params:
-      action: start
-      labelSelector: group=load_small
-      threshold: 15m
-
-- name: Creating services
-  phases:
-  - namespaceRange:
-      min: 1
-      max: {{$namespaces}}
-    replicasPerNamespace: 1
-    tuningSet: Sequence
-    objectBundle:
-    - basename: service
-      objectTemplatePath: service.yaml
-
-    - basename: statefulset-service
-      objectTemplatePath: statefulset_service.yaml
-
-- name: Start measurement for waiting for pods
-  measurements:
-  - Method: WaitForControlledPodsRunning
-    Instances:
-    - Identifier: WaitForRunningDeployments
-      Params:
-        apiVersion: apps/v1
-        kind: Deployment
-
-    - Identifier: WaitForRunningStatefulSets
-      Params:
-        apiVersion: apps/v1
-        kind: StatefulSet
-
-    - Identifier: WaitForRunningDaemonSets
-      Params:
-        apiVersion: apps/v1
-        kind: DaemonSet
-
-    - Identifier: WaitForRunningJobs
-      Params:
-        apiVersion: batch/v1
-        kind: Job
-
-    Params:
-      action: start
-      labelSelector: group=load
-      operationTimeout: 15m
-
-- name: Start measurement for waiting for small pods
-  measurements:
-  - Method: WaitForControlledPodsRunning
-    Instances:
-    - Identifier: WaitForRunningDeploymentsSmall
-      Params:
-        apiVersion: apps/v1
-        kind: Deployment
-
-    - Identifier: WaitForRunningStatefulSetsSmall
-      Params:
-        apiVersion: apps/v1
-        kind: StatefulSet
-
-    Params:
-      action: start
-      labelSelector: group=load_small
-      operationTimeout: 15m
-  
-- name: Creating objects
-  phases:
-  - namespaceRange:
-      min: 1
-      max: {{$namespaces}}
-    replicasPerNamespace: 1
-    tuningSet: RandomizedSaturationTimeLimited
-    objectBundle:
-    
-    - basename: daemonset
-      objectTemplatePath: daemonset.yaml
-      templateFillMap:
-        Image: liamisko123/test:v1
-
-    - basename: my-configmap
-      objectTemplatePath: configmap.yaml
-
-    - basename: my-secret
-      objectTemplatePath: secret.yaml
-
-    - basename: my-job
-      objectTemplatePath: job.yaml
-      templateFillMap:
-        ReplicasMin: {{$countJob}}
-        ReplicasMax: {{$countJob}}
-        Image: liamisko123/test:v2
-
-    - basename: my-deployment
-      objectTemplatePath: deployment.yaml
-      templateFillMap:
-        ReplicasMin: {{$countPod}}
-        ReplicasMax: {{$countPod}}
-        Image: liamisko123/test:v1
-
-    - basename: my-statefulset
-      objectTemplatePath: statefulset.yaml
-      templateFillMap:
-        ReplicasMin: {{$countStateful}}
-        ReplicasMax: {{$countStateful}}
-        Image: registry.k8s.io/pause:3.9
-
-    - basename: my-deployment-small
-      objectTemplatePath: deployment_small.yaml
-      templateFillMap:
-        ReplicasMin: {{$countPodSmall}}
-        ReplicasMax: {{$countPodSmall}}
-        Image: liamisko123/test:v1
-
-    - basename: my-statefulset-small
-      objectTemplatePath: statefulset_small.yaml
-      templateFillMap:
-        ReplicasMin: {{$countStatefulSmall}}
-        ReplicasMax: {{$countStatefulSmall}}
-        Image: registry.k8s.io/pause:3.9
-
-- name: Waiting for pods to be running
-  measurements:
-  - Method: WaitForControlledPodsRunning
-    Instances:
-     - Identifier: WaitForRunningDeployments
-     - Identifier: WaitForRunningStatefulSets
-     - Identifier: WaitForRunningDaemonSets
-     - Identifier: WaitForRunningJobs
-     - Identifier: WaitForRunningDeploymentsSmall
-     - Identifier: WaitForRunningStatefulSetsSmall
-    Params:
-      action: gather
 
 - name: Sleep
   measurements:
@@ -383,14 +232,3 @@ steps:
     Params:
       action: gather
       enableViolations: true
-
-  - Identifier: PodStartupLatencyBig
-    Method: PodStartupLatency
-    Params:
-      action: gather
-  
-  - Identifier: PodStartupLatencySmall
-    Method: PodStartupLatency
-    Params:
-      action: gather
-
